@@ -16,6 +16,7 @@ use linera_sdk::{
     Contract, ContractRuntime,
 };
 use serde::{Deserialize, Serialize};
+use log::{info, warn, error}; // Added logging
 
 use self::state::Application;
 
@@ -35,23 +36,21 @@ impl Contract for ApplicationContract {
     type Parameters = Parameters;
     type InstantiationArgument = ();
 
-    async fn load(runtime: ContractRuntime<Self>) -> Self {
+    /// Loads the contract state.
+    async fn load(runtime: ContractRuntime<Self>) -> Result<Self, String> {
         let state = Application::load(runtime.root_view_storage_context())
             .await
-            .expect("Failed to load state");
-        ApplicationContract { state, runtime }
+            .map_err(|e| format!("Failed to load state: {e}"))?;
+        Ok(ApplicationContract { state, runtime })
     }
 
     /// Instantiates the application.
-    ///
-    /// Fails if the [`Parameters`] specified to create the application are invalid.
     async fn instantiate(&mut self, _argument: Self::InstantiationArgument) {
-        // Fetch the parameters to check that they can be successfully deserialized.
+        // Check if parameters are valid.
         let _parameters = self.runtime.application_parameters();
     }
 
-    /// Verifies an [`AirDropClaim`][`zk_airdrop_demo::AirDropClaim`] and if approved, sends a
-    /// message to the application's creator chain to ask the tokens to be delivered.
+    /// Executes the operation related to the airdrop claim.
     async fn execute_operation(&mut self, claim: Self::Operation) -> Self::Response {
         let creator_chain = self.runtime.application_creator_chain_id();
         let amount = self.airdrop_amount(&claim).await;
@@ -60,8 +59,9 @@ impl Contract for ApplicationContract {
             .signer_address(application_id)
             .expect("Failed to verify signature");
 
-        self.assert_eligibility(&claimer, &claim.api_token);
+        self.assert_eligibility(&claimer, &claim.api_token).await;
 
+        // Send message to the creator chain to deliver the tokens.
         self.runtime
             .prepare_message(ApprovedAirDrop {
                 id: claimer.into(),
@@ -72,9 +72,9 @@ impl Contract for ApplicationContract {
             .send_to(creator_chain);
     }
 
-    /// Checks that an `airdrop` hasn't been handled before, and if so delivers its tokens.
+    /// Handles the message if the airdrop was successfully approved.
     async fn execute_message(&mut self, airdrop: Self::Message) {
-        self.track_claim(&airdrop.id).await;
+        self.track_claim(&airdrop.id).await.unwrap();
 
         let parameters = self.runtime.application_parameters();
         let source_account = AccountOwner::Application(self.runtime.application_id().forget_abi());
@@ -89,58 +89,77 @@ impl Contract for ApplicationContract {
             .call_application(true, parameters.token_id, &transfer);
     }
 
+    /// Stores the contract state.
     async fn store(mut self) {
         self.state.save().await.expect("Failed to save state");
     }
 }
 
 impl ApplicationContract {
-    /// Asserts that an [`Address`] is eligible for an airdrop.
-    pub fn assert_eligibility(&mut self, address: &Address, api_token: &str) {
-        let request = async_graphql::Request::new(format!(
+    /// Checks if the address is eligible for the airdrop.
+    pub async fn assert_eligibility(&mut self, address: &Address, api_token: &str) {
+        match self.query_eligibility(&address.to_string(), api_token).await {
+            Ok(is_eligible) => {
+                if !is_eligible {
+                    warn!("Address {} is not eligible for airdrop.", address);
+                }
+                assert!(is_eligible, "Address is not eligible for airdrop");
+            }
+            Err(err) => {
+                error!("Failed to query eligibility: {}", err);
+                panic!("Eligibility check failed.");
+            }
+        }
+    }
+
+    /// Queries the service to check eligibility for the airdrop.
+    async fn query_eligibility(&self, address: &str, api_token: &str) -> Result<bool, String> {
+        let query = format!(
             r#"query {{ checkEligibility(address: "{address}", apiToken: "{api_token}") }}"#
-        ));
-
-        let application_id = self.runtime.application_id();
-        let response = self.runtime.query_service(application_id, request);
-
-        let async_graphql::Value::Object(data_object) = response.data else {
-            panic!("Unexpected response from `checkEligibility: {response:?}`");
-        };
-
-        let async_graphql::Value::Boolean(is_eligible) = data_object["checkEligibility"] else {
-            panic!("Missing `checkEligibility` result in response data: {data_object:?}");
-        };
-
-        assert!(is_eligible);
-    }
-
-    /// Calculates the [`Amount`] to be airdropped for one [`AirDropClaim`].
-    async fn airdrop_amount(&mut self, _claim: &AirDropClaim) -> Amount {
-        Amount::ONE
-    }
-
-    /// Tracks a claim, aborting the execution if it has already been handled.
-    async fn track_claim(&mut self, airdrop: &AirDropId) {
-        assert!(
-            !self
-                .state
-                .handled_airdrops
-                .contains(airdrop)
-                .await
-                .expect("Failed to read handled claims from storage"),
-            "Airdrop has already been paid"
         );
+        let request = async_graphql::Request::new(query);
 
+        let response = self.runtime.query_service(self.runtime.application_id(), request).await;
+        let data = response
+            .data
+            .get("checkEligibility")
+            .and_then(|v| v.as_bool())
+            .ok_or_else(|| "Failed to get eligibility from response".to_string())?;
+        
+        Ok(data)
+    }
+
+    /// Calculates the amount to be airdropped for a single claim.
+    async fn airdrop_amount(&mut self, _claim: &AirDropClaim) -> Amount {
+        Amount::ONE // You can implement your own logic for calculating the amount
+    }
+
+    /// Tracks the claim and aborts execution if it has already been processed.
+    async fn track_claim(&mut self, airdrop: &AirDropId) -> Result<(), String> {
+        if self.has_claim_been_processed(airdrop).await? {
+            return Err("Airdrop has already been paid".into());
+        }
+
+        self.state.handled_airdrops.insert(airdrop).map_err(|e| format!("Failed to insert claim: {e}"))?;
+        Ok(())
+    }
+
+    /// Checks if the claim has already been processed.
+    async fn has_claim_been_processed(&self, airdrop: &AirDropId) -> Result<bool, String> {
         self.state
             .handled_airdrops
-            .insert(airdrop)
-            .expect("Failed to write handled claim to storage");
+            .contains(airdrop)
+            .await
+            .map_err(|e| format!("Failed to check claim status: {e}"))
+    }
+
+    /// Saves the updated contract state.
+    async fn store_state(&mut self) {
+        self.state.save().await.expect("Failed to save state");
     }
 }
 
-/// An airdrop claim that has been approved and sent back to the creator chain to deliver the
-/// tokens.
+/// An approved airdrop that is sent to the creator chain for token delivery.
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Clone, Eq, PartialEq))]
 pub struct ApprovedAirDrop {
@@ -148,3 +167,4 @@ pub struct ApprovedAirDrop {
     amount: Amount,
     destination: Account,
 }
+
