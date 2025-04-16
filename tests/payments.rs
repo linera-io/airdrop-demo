@@ -8,8 +8,8 @@ use async_graphql::InputType;
 use k256::ecdsa::SigningKey;
 use linera_sdk::{
     abis::fungible::{self, FungibleTokenAbi},
-    base::{AccountOwner, Amount, ApplicationId},
-    test::{ActiveChain, TestValidator},
+    linera_base_types::{AccountOwner, Amount, ApplicationId},
+    test::{ActiveChain, QueryOutcome, TestValidator},
 };
 use rand::{rngs::StdRng, SeedableRng};
 
@@ -29,8 +29,6 @@ async fn pays_valid_claim() {
     };
 
     let claim = prepare_airdrop_claim(application_id, 0, claimer_account);
-
-    claimer_chain.register_application(application_id).await;
 
     let claim_certificate = claimer_chain
         .add_block(|block| {
@@ -78,8 +76,6 @@ async fn pays_multiple_claims() {
             chain_id: claimer_chain.id(),
             owner: AccountOwner::from(claimer_chain.public_key()),
         };
-
-        claimer_chain.register_application(application_id).await;
 
         let claim = prepare_airdrop_claim(application_id, claim_index, claimer_account);
 
@@ -135,7 +131,6 @@ async fn rejects_replay_attacks_in_the_same_block() {
 
     let claim = prepare_airdrop_claim(application_id, 0, claimer_account);
 
-    claimer_chain.register_application(application_id).await;
     claimer_chain
         .add_block(|block| {
             block
@@ -163,7 +158,6 @@ async fn rejects_replay_attacks_in_the_same_chain() {
 
     let claim = prepare_airdrop_claim(application_id, 0, claimer_account);
 
-    claimer_chain.register_application(application_id).await;
     claimer_chain
         .add_block(|block| {
             block.with_operation(application_id, claim.clone());
@@ -196,7 +190,6 @@ async fn rejects_replay_attacks_in_different_chains() {
 
     let claim = prepare_airdrop_claim(application_id, 0, claimer_account);
 
-    claimer_chain.register_application(application_id).await;
     claimer_chain
         .add_block(|block| {
             block.with_operation(application_id, claim.clone());
@@ -230,7 +223,6 @@ async fn payment_fails_if_airdrop_account_is_empty() {
 
     let first_claim = prepare_airdrop_claim(application_id, 1, claimer_account);
 
-    claimer_chain.register_application(application_id).await;
     claimer_chain
         .add_block(|block| {
             block.with_operation(application_id, first_claim);
@@ -246,9 +238,6 @@ async fn payment_fails_if_airdrop_account_is_empty() {
 
     let late_claim = prepare_airdrop_claim(application_id, 2, late_claimer_account);
 
-    late_claimer_chain
-        .register_application(application_id)
-        .await;
     late_claimer_chain
         .add_block(|block| {
             block.with_operation(application_id, late_claim);
@@ -269,13 +258,13 @@ async fn setup(
     ApplicationId<ApplicationAbi>,
 ) {
     let (validator, bytecode_id) =
-        TestValidator::with_current_bytecode::<ApplicationAbi, Parameters, ()>().await;
+        TestValidator::with_current_module::<ApplicationAbi, Parameters, ()>().await;
 
     let mut airdrop_chain = validator.new_chain().await;
     let initial_token_owner = AccountOwner::from(airdrop_chain.public_key());
 
     let fungible_bytecode_id = airdrop_chain
-        .publish_bytecodes_in("vendor/linera-protocol/examples/fungible")
+        .publish_bytecode_files_in("vendor/linera-protocol/examples/fungible")
         .await;
     let token_id = airdrop_chain
         .create_application(
@@ -305,7 +294,7 @@ async fn setup(
 
     let airdrop_account = fungible::Account {
         chain_id: airdrop_chain.id(),
-        owner: AccountOwner::Application(application_id.forget_abi()),
+        owner: AccountOwner::from(application_id),
     };
 
     airdrop_chain
@@ -355,7 +344,7 @@ async fn query_balance(
     let owner = owner.to_value();
     let query = format!("query {{ accounts {{ entry(key: {owner}) {{ value }} }} }}");
 
-    let response = chain.graphql_query(token_id, query).await;
+    let QueryOutcome { response, .. } = chain.graphql_query(token_id, query).await;
 
     let balance = response.pointer("/accounts/entry/value")?.as_str()?;
 

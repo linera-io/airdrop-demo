@@ -7,21 +7,19 @@
 mod service_unit_tests;
 mod state;
 
-use std::{
-    str::FromStr,
-    sync::{Arc, Mutex},
-};
+use std::{str::FromStr, sync::Arc};
 
 use airdrop_demo::{AirDropClaim, Parameters};
 use alloy_primitives::U256;
 use async_graphql::{EmptySubscription, Schema};
 use linera_sdk::{
-    abis::fungible, base::WithServiceAbi, bcs, ensure, http, serde_json, Service, ServiceRuntime,
+    abis::fungible, bcs, ensure, http, linera_base_types::WithServiceAbi, serde_json, Service,
+    ServiceRuntime,
 };
 
 #[derive(Clone)]
 pub struct ApplicationService {
-    runtime: Arc<Mutex<ServiceRuntime<Self>>>,
+    runtime: Arc<ServiceRuntime<Self>>,
 }
 
 linera_sdk::service!(ApplicationService);
@@ -35,7 +33,7 @@ impl Service for ApplicationService {
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
         ApplicationService {
-            runtime: Arc::new(Mutex::new(runtime)),
+            runtime: Arc::new(runtime),
         }
     }
 
@@ -60,17 +58,11 @@ impl Query {
     ) -> async_graphql::Result<bool> {
         let lowercase_address = address.to_lowercase();
 
-        let mut runtime = self
-            .0
-            .runtime
-            .lock()
-            .expect("Panics should abort service, so mutex should never be poisoned");
-
         let Parameters {
             snapshot_block,
             minimum_balance,
             ..
-        } = runtime.application_parameters();
+        } = self.0.runtime.application_parameters();
 
         let query = format!(
             "{{ \"sqlText\": \"\
@@ -82,7 +74,7 @@ impl Query {
             \" }}"
         );
 
-        let response = runtime.http_request(
+        let response = self.0.runtime.http_request(
             http::Request::post(SXT_GATEWAY_URL, query.as_bytes())
                 .with_header("Content-Type", b"application/json")
                 .with_header("Authorization", format!("Bearer {api_token}").as_bytes()),

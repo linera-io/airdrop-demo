@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use alloy_sol_types::{eip712_domain, sol, Eip712Domain};
-use linera_sdk::{abis::fungible, base::ApplicationId, bcs};
+use linera_sdk::{abis::fungible, bcs, linera_base_types::ApplicationId};
 
 use crate::{ApplicationAbi, ETHEREUM_MAINNET_CHAIN_ID};
 

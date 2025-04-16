@@ -11,7 +11,7 @@ use airdrop_demo::{AirDropClaim, AirDropId, Parameters};
 use alloy_primitives::Address;
 use linera_sdk::{
     abis::fungible::{self, Account},
-    base::{AccountOwner, Amount, WithContractAbi},
+    linera_base_types::{AccountOwner, Amount, WithContractAbi},
     views::{RootView, View},
     Contract, ContractRuntime,
 };
@@ -32,6 +32,7 @@ impl WithContractAbi for ApplicationContract {
 
 impl Contract for ApplicationContract {
     type Message = ApprovedAirDrop;
+    type EventValue = ();
     type Parameters = Parameters;
     type InstantiationArgument = ();
 
@@ -77,7 +78,7 @@ impl Contract for ApplicationContract {
         self.track_claim(&airdrop.id).await;
 
         let parameters = self.runtime.application_parameters();
-        let source_account = AccountOwner::Application(self.runtime.application_id().forget_abi());
+        let source_account = AccountOwner::from(self.runtime.application_id());
 
         let transfer = fungible::Operation::Transfer {
             owner: source_account,
