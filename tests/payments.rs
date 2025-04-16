@@ -264,7 +264,7 @@ async fn setup(
     let initial_token_owner = AccountOwner::from(airdrop_chain.public_key());
 
     let fungible_bytecode_id = airdrop_chain
-        .publish_bytecodes_in("vendor/linera-protocol/examples/fungible")
+        .publish_bytecode_files_in("vendor/linera-protocol/examples/fungible")
         .await;
     let token_id = airdrop_chain
         .create_application(
