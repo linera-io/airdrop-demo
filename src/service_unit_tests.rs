@@ -1,7 +1,7 @@
 // Copyright (c) Zefchain Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use airdrop_demo::{
     test_utils::{create_dummy_application_id, create_dummy_token_id, sign_claim},
@@ -25,13 +25,13 @@ use super::{ApplicationService, SXT_GATEWAY_URL};
 /// Tests if a GraphQL query can successfully check if an account is eligible.
 #[test]
 fn query_returns_address_is_eligible() {
-    let service = create_service();
+    let mut service = create_service();
 
     let address = Address::random();
     let api_token = "API token".to_owned();
 
     let eligibility_query = prepare_eligibility_query(
-        &service,
+        &mut service,
         &address,
         &api_token,
         http::Response::ok(format!("[{{ \"BALANCE\": \"{MINIMUM_BALANCE}\" }}]").as_bytes()),
@@ -46,7 +46,7 @@ fn query_returns_address_is_eligible() {
 /// [`MINIMUM_BALANCE`].
 #[test]
 fn query_returns_address_with_insufficient_balance_is_not_eligible() {
-    let service = create_service();
+    let mut service = create_service();
 
     let address = Address::random();
     let api_token = "API token".to_owned();
@@ -54,7 +54,7 @@ fn query_returns_address_with_insufficient_balance_is_not_eligible() {
     let insufficient_balance = MINIMUM_BALANCE - 1;
 
     let eligibility_query = prepare_eligibility_query(
-        &service,
+        &mut service,
         &address,
         &api_token,
         http::Response::ok(format!("[{{ \"BALANCE\": \"{insufficient_balance}\" }}]").as_bytes()),
@@ -69,13 +69,17 @@ fn query_returns_address_with_insufficient_balance_is_not_eligible() {
 /// block height.
 #[test]
 fn query_returns_address_thats_unknown_at_snapshot_is_not_eligible() {
-    let service = create_service();
+    let mut service = create_service();
 
     let address = Address::random();
     let api_token = "API token".to_owned();
 
-    let eligibility_query =
-        prepare_eligibility_query(&service, &address, &api_token, http::Response::ok(b"[]"));
+    let eligibility_query = prepare_eligibility_query(
+        &mut service,
+        &address,
+        &api_token,
+        http::Response::ok(b"[]"),
+    );
 
     let response = service.handle_query(eligibility_query).blocking_wait();
 
@@ -85,13 +89,13 @@ fn query_returns_address_thats_unknown_at_snapshot_is_not_eligible() {
 /// Tests if a GraphQL query reports query errors.
 #[test]
 fn query_returns_http_errors() {
-    let service = create_service();
+    let mut service = create_service();
 
     let address = Address::random();
     let api_token = "API token".to_owned();
 
     let eligibility_query = prepare_eligibility_query(
-        &service,
+        &mut service,
         &address,
         &api_token,
         http::Response::unauthorized(),
@@ -187,7 +191,7 @@ fn create_service() -> ApplicationService {
     });
 
     ApplicationService {
-        runtime: Arc::new(Mutex::new(runtime)),
+        runtime: Arc::new(runtime),
     }
 }
 
@@ -199,15 +203,13 @@ const MINIMUM_BALANCE: usize = 10;
 /// Configures the `service`'s mock runtime to return the expected `query_response` when the HTTP
 /// query is made.
 fn prepare_eligibility_query(
-    service: &ApplicationService,
+    service: &mut ApplicationService,
     address: &Address,
     api_token: &str,
     query_response: http::Response,
 ) -> async_graphql::Request {
-    let mut runtime = service
-        .runtime
-        .lock()
-        .expect("Test should abort on panic, so mutex should never be poisoned");
+    let runtime = Arc::get_mut(&mut service.runtime)
+        .expect("Service should not be have an active clone when preparing for eligibilty query");
 
     let snapshot_block = runtime.application_parameters().snapshot_block;
     let sql_query = format!(
