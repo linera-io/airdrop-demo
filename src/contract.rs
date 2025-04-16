@@ -11,7 +11,7 @@ use airdrop_demo::{AirDropClaim, AirDropId, Parameters};
 use alloy_primitives::Address;
 use linera_sdk::{
     abis::fungible::{self, Account},
-    base::{AccountOwner, Amount, WithContractAbi},
+    linera_base_types::{AccountOwner, Amount, WithContractAbi},
     views::{RootView, View},
     Contract, ContractRuntime,
 };

@@ -8,7 +8,7 @@ use async_graphql::InputType;
 use k256::ecdsa::SigningKey;
 use linera_sdk::{
     abis::fungible::{self, FungibleTokenAbi},
-    base::{AccountOwner, Amount, ApplicationId},
+    linera_base_types::{AccountOwner, Amount, ApplicationId},
     test::{ActiveChain, TestValidator},
 };
 use rand::{rngs::StdRng, SeedableRng};

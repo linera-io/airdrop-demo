@@ -12,7 +12,7 @@ use alloy_sol_types::SolStruct;
 use indexmap::IndexMap;
 use linera_sdk::{
     abis::fungible::{Account, FungibleTokenAbi},
-    base::{ApplicationId, ContractAbi, ServiceAbi},
+    linera_base_types::{ApplicationId, ContractAbi, ServiceAbi},
 };
 use serde::{Deserialize, Serialize};
 

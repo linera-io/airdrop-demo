@@ -16,7 +16,8 @@ use airdrop_demo::{AirDropClaim, Parameters};
 use alloy_primitives::U256;
 use async_graphql::{EmptySubscription, Schema};
 use linera_sdk::{
-    abis::fungible, base::WithServiceAbi, bcs, ensure, http, serde_json, Service, ServiceRuntime,
+    abis::fungible, bcs, ensure, http, linera_base_types::WithServiceAbi, serde_json, Service,
+    ServiceRuntime,
 };
 
 #[derive(Clone)]

@@ -10,8 +10,10 @@ use indexmap::IndexMap;
 use k256::ecdsa::SigningKey;
 use linera_sdk::{
     abis::fungible::{self, Account, FungibleResponse},
-    base::{AccountOwner, Amount, ApplicationId, ChainId, CryptoHash, Destination, Owner},
     bcs,
+    linera_base_types::{
+        AccountOwner, Amount, ApplicationId, ChainId, CryptoHash, Destination, Owner,
+    },
     util::BlockingWait,
     views::View,
     Contract, ContractRuntime, Resources, SendMessageRequest,

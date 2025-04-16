@@ -11,8 +11,9 @@ use alloy_primitives::{Address, U256};
 use k256::ecdsa::SigningKey;
 use linera_sdk::{
     abis::fungible,
-    base::{AccountOwner, ChainId, CryptoHash, Owner},
-    bcs, http, serde_json,
+    bcs, http,
+    linera_base_types::{AccountOwner, ChainId, CryptoHash, Owner},
+    serde_json,
     service::MockServiceRuntime,
     util::BlockingWait,
     Service,
