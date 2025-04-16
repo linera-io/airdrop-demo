@@ -77,7 +77,7 @@ impl Contract for ApplicationContract {
         self.track_claim(&airdrop.id).await;
 
         let parameters = self.runtime.application_parameters();
-        let source_account = AccountOwner::Application(self.runtime.application_id().forget_abi());
+        let source_account = AccountOwner::from(self.runtime.application_id());
 
         let transfer = fungible::Operation::Transfer {
             owner: source_account,

@@ -294,7 +294,7 @@ async fn setup(
 
     let airdrop_account = fungible::Account {
         chain_id: airdrop_chain.id(),
-        owner: AccountOwner::Application(application_id.forget_abi()),
+        owner: AccountOwner::from(application_id),
     };
 
     airdrop_chain

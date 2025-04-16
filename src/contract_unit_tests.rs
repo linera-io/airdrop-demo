@@ -11,9 +11,7 @@ use k256::ecdsa::SigningKey;
 use linera_sdk::{
     abis::fungible::{self, Account, FungibleResponse},
     bcs,
-    linera_base_types::{
-        AccountOwner, Amount, ApplicationId, ChainId, CryptoHash, Destination, Owner,
-    },
+    linera_base_types::{AccountOwner, Amount, ApplicationId, ChainId, CryptoHash, Destination},
     util::BlockingWait,
     views::View,
     Contract, ContractRuntime, Resources, SendMessageRequest,
@@ -95,7 +93,7 @@ fn pays_accepted_airdrop() {
             assert_eq!(
                 operation,
                 bcs::to_bytes(&fungible::Operation::Transfer {
-                    owner: AccountOwner::Application(application_id.forget_abi()),
+                    owner: AccountOwner::from(application_id),
                     amount,
                     target_account: destination,
                 })
@@ -140,7 +138,7 @@ fn rejects_repeated_airdrop() {
             assert_eq!(
                 operation,
                 bcs::to_bytes(&fungible::Operation::Transfer {
-                    owner: AccountOwner::Application(application_id.forget_abi()),
+                    owner: AccountOwner::from(application_id),
                     amount,
                     target_account: first_destination,
                 })
@@ -187,8 +185,6 @@ fn create_and_instantiate_contract() -> (ApplicationContract, ApplicationId<Appl
 fn create_dummy_destination(index: usize) -> Account {
     Account {
         chain_id: ChainId(CryptoHash::test_hash(format!("destination chain {index}"))),
-        owner: AccountOwner::User(Owner(CryptoHash::test_hash(format!(
-            "destination owner {index}"
-        )))),
+        owner: AccountOwner::Address32(CryptoHash::test_hash(format!("destination owner {index}"))),
     }
 }

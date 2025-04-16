@@ -12,7 +12,7 @@ use k256::ecdsa::SigningKey;
 use linera_sdk::{
     abis::fungible,
     bcs, http,
-    linera_base_types::{AccountOwner, ChainId, CryptoHash, Owner},
+    linera_base_types::{AccountOwner, ChainId, CryptoHash},
     serde_json,
     service::MockServiceRuntime,
     util::BlockingWait,
@@ -109,7 +109,7 @@ fn mutation_generates_air_drop_claim() {
     let service = create_service();
 
     let chain_id = ChainId(CryptoHash::test_hash("chain ID"));
-    let claimer = AccountOwner::User(Owner(CryptoHash::test_hash("claimer")));
+    let claimer = AccountOwner::Address32(CryptoHash::test_hash("claimer"));
     let destination = fungible::Account {
         chain_id,
         owner: claimer,
