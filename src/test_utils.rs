@@ -8,7 +8,7 @@ use alloy_sol_types::SolStruct;
 use k256::ecdsa::SigningKey;
 use linera_sdk::{
     abis::fungible,
-    base::{ApplicationId, BlockHeight, BytecodeId, ChainId, CryptoHash, MessageId},
+    linera_base_types::{ApplicationId, CryptoHash},
 };
 
 use crate::{
@@ -18,27 +18,12 @@ use crate::{
 
 /// Creates a dummy [`ApplicationId`] to use as the Fungible Token for testing.
 pub fn create_dummy_token_id<Abi>() -> ApplicationId<Abi> {
-    create_dummy_application_id("fungible token", 0)
+    create_dummy_application_id("fungible token")
 }
 
 /// Creates a dummy [`ApplicationId`] to use for testing.
-pub fn create_dummy_application_id<Abi>(name: &str, index: u32) -> ApplicationId<Abi> {
-    let bytecode_id = BytecodeId::new(
-        CryptoHash::test_hash(format!("{name} contract")),
-        CryptoHash::test_hash(format!("{name} service")),
-    );
-
-    let creation = MessageId {
-        chain_id: ChainId(CryptoHash::test_hash("chain")),
-        height: BlockHeight::ZERO,
-        index,
-    };
-
-    ApplicationId {
-        bytecode_id,
-        creation,
-    }
-    .with_abi()
+pub fn create_dummy_application_id<Abi>(name: &str) -> ApplicationId<Abi> {
+    ApplicationId::new(CryptoHash::test_hash(name)).with_abi()
 }
 
 /// Creates a [`Signature`] for an airdrop claim.

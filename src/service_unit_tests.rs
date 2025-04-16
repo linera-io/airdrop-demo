@@ -115,7 +115,7 @@ fn mutation_generates_air_drop_claim() {
     };
 
     let api_token = "API token".to_owned();
-    let application_id = create_dummy_application_id("zk-airdrop", 1);
+    let application_id = create_dummy_application_id("zk-airdrop");
     let signing_key = SigningKey::random(&mut OsRng);
     let signature = sign_claim(&signing_key, application_id, destination);
     let signature_string = hex::encode(signature.as_bytes());

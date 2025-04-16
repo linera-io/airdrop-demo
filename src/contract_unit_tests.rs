@@ -158,7 +158,7 @@ fn rejects_repeated_airdrop() {
 /// Returns the [`ApplicationContract`] instance along with a dummy [`ApplicationId`] that was
 /// assigned to it.
 fn create_and_instantiate_contract() -> (ApplicationContract, ApplicationId<ApplicationAbi>) {
-    let application_id = create_dummy_application_id("zk-airdrop", 1);
+    let application_id = create_dummy_application_id("zk-airdrop");
 
     let runtime = ContractRuntime::new()
         .with_application_parameters(Parameters {
