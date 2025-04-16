@@ -32,6 +32,7 @@ impl WithContractAbi for ApplicationContract {
 
 impl Contract for ApplicationContract {
     type Message = ApprovedAirDrop;
+    type EventValue = ();
     type Parameters = Parameters;
     type InstantiationArgument = ();
 
