@@ -258,7 +258,7 @@ async fn setup(
     ApplicationId<ApplicationAbi>,
 ) {
     let (validator, bytecode_id) =
-        TestValidator::with_current_bytecode::<ApplicationAbi, Parameters, ()>().await;
+        TestValidator::with_current_module::<ApplicationAbi, Parameters, ()>().await;
 
     let mut airdrop_chain = validator.new_chain().await;
     let initial_token_owner = AccountOwner::from(airdrop_chain.public_key());
