@@ -9,7 +9,7 @@ use k256::ecdsa::SigningKey;
 use linera_sdk::{
     abis::fungible::{self, FungibleTokenAbi},
     linera_base_types::{AccountOwner, Amount, ApplicationId},
-    test::{ActiveChain, TestValidator},
+    test::{ActiveChain, QueryOutcome, TestValidator},
 };
 use rand::{rngs::StdRng, SeedableRng};
 
@@ -344,7 +344,7 @@ async fn query_balance(
     let owner = owner.to_value();
     let query = format!("query {{ accounts {{ entry(key: {owner}) {{ value }} }} }}");
 
-    let response = chain.graphql_query(token_id, query).await;
+    let QueryOutcome { response, .. } = chain.graphql_query(token_id, query).await;
 
     let balance = response.pointer("/accounts/entry/value")?.as_str()?;
 
