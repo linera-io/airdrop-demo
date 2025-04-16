@@ -7,7 +7,7 @@ pub mod test_utils;
 
 use std::str::FromStr;
 
-use alloy_primitives::{Address, Signature, SignatureError, U256};
+use alloy_primitives::{Address, PrimitiveSignature, SignatureError, U256};
 use alloy_sol_types::SolStruct;
 use indexmap::IndexMap;
 use linera_sdk::{
@@ -95,7 +95,7 @@ impl async_graphql::ScalarType for AirDropId {
 /// An airdrop claim.
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct AirDropClaim {
-    pub signature: Signature,
+    pub signature: PrimitiveSignature,
     pub destination: Account,
     pub api_token: String,
 }
@@ -140,7 +140,7 @@ impl async_graphql::ScalarType for AirDropClaim {
             ));
         };
 
-        let signature = Signature::from_str(&signature_string).map_err(|_| {
+        let signature = PrimitiveSignature::from_str(&signature_string).map_err(|_| {
             async_graphql::InputValueError::custom(
                 "`AirDropClaim`'s `signature` is not a valid signature string",
             )

@@ -168,7 +168,7 @@ fn mutation_generates_air_drop_claim() {
     let mut operation = bcs::from_bytes::<AirDropClaim>(&serialized_operation)
         .expect("Failed to deserialize returned operation");
 
-    operation.signature = operation.signature.with_parity_bool();
+    operation.signature = operation.signature.with_parity(operation.signature.v());
 
     let expected_operation = AirDropClaim {
         signature,
